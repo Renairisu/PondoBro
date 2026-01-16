@@ -532,7 +532,6 @@ fn dashboard_page() -> Html {
         })
     };
 
-
     let mut spent_by_category: HashMap<String, i64> = HashMap::new();
     for tx in (*transactions).iter() {
         if tx.amount < 0 {
