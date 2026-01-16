@@ -291,7 +291,7 @@ fn dashboard_page() -> Html {
         .map(|s| s.currency_symbol.clone())
         .unwrap_or_else(|| "₱".to_string());
 
-    let saving_goal = use_state(load_saving_goal);
+    let current_goal = load_saving_goal();
 
     let form_date = use_state(|| "".to_string());
     let form_description = use_state(|| "".to_string());
@@ -302,9 +302,6 @@ fn dashboard_page() -> Html {
     let saving = use_state(|| false);
 
     let budgets = use_state(load_budgets);
-    let budget_category = use_state(|| "".to_string());
-    let budget_limit = use_state(|| "".to_string());
-    let budget_error = use_state(|| None::<String>);
 
     // fetch transactions and dashboard summary
     let total_income = use_state(|| 0i64);
@@ -328,7 +325,8 @@ fn dashboard_page() -> Html {
                             if let Ok(Some(storage)) = window.local_storage() {
                                 if let Ok(token_opt) = storage.get_item("access_token") {
                                     if let Some(token) = token_opt {
-                                        req = req.header("Authorization", &format!("Bearer {}", token));
+                                        req = req
+                                            .header("Authorization", &format!("Bearer {}", token));
                                     }
                                 }
                             }
@@ -346,12 +344,14 @@ fn dashboard_page() -> Html {
                     // fetch dashboard summary
                     let summary_url = format!("{}/api/dashboard/summary", API_BASE_URL);
                     {
-                        let mut req2 = Request::get(&summary_url).credentials(RequestCredentials::Include);
+                        let mut req2 =
+                            Request::get(&summary_url).credentials(RequestCredentials::Include);
                         if let Some(window) = web_sys::window() {
                             if let Ok(Some(storage)) = window.local_storage() {
                                 if let Ok(token_opt) = storage.get_item("access_token") {
                                     if let Some(token) = token_opt {
-                                        req2 = req2.header("Authorization", &format!("Bearer {}", token));
+                                        req2 = req2
+                                            .header("Authorization", &format!("Bearer {}", token));
                                     }
                                 }
                             }
@@ -360,10 +360,13 @@ fn dashboard_page() -> Html {
                         if let Ok(resp2) = req2.send().await {
                             if resp2.ok() {
                                 if let Ok(json) = resp2.json::<serde_json::Value>().await {
-                                    if let Some(v) = json.get("total_income").and_then(|x| x.as_i64()) {
+                                    if let Some(v) =
+                                        json.get("total_income").and_then(|x| x.as_i64())
+                                    {
                                         total_income.set(v);
                                     }
-                                    if let Some(v) = json.get("total_expenses").and_then(|x| x.as_i64())
+                                    if let Some(v) =
+                                        json.get("total_expenses").and_then(|x| x.as_i64())
                                     {
                                         total_expenses.set(v);
                                     }
@@ -427,7 +430,11 @@ fn dashboard_page() -> Html {
             let category_val = form_category.trim().to_string();
             let amount_val = form_amount.trim().to_string();
 
-            if date_val.is_empty() || desc_val.is_empty() || category_val.is_empty() || amount_val.is_empty() {
+            if date_val.is_empty()
+                || desc_val.is_empty()
+                || category_val.is_empty()
+                || amount_val.is_empty()
+            {
                 form_error.set(Some("Please complete all fields.".to_string()));
                 return;
             }
@@ -457,7 +464,8 @@ fn dashboard_page() -> Html {
                     if let Ok(Some(storage)) = window.local_storage() {
                         if let Ok(token_opt) = storage.get_item("access_token") {
                             if let Some(token) = token_opt {
-                                builder = builder.header("Authorization", &format!("Bearer {}", token));
+                                builder =
+                                    builder.header("Authorization", &format!("Bearer {}", token));
                             }
                         }
                     }
@@ -524,44 +532,6 @@ fn dashboard_page() -> Html {
         })
     };
 
-    let on_add_budget = {
-        let budgets = budgets.clone();
-        let budget_category = budget_category.clone();
-        let budget_limit = budget_limit.clone();
-        let budget_error = budget_error.clone();
-        Callback::from(move |_| {
-            let category = budget_category.trim().to_string();
-            let limit = budget_limit.trim().parse::<i64>().unwrap_or(0);
-
-            if category.is_empty() || limit <= 0 {
-                budget_error.set(Some("Enter a category and a positive limit.".to_string()));
-                return;
-            }
-
-            let mut next = (*budgets).clone();
-            if let Some(existing) = next.iter_mut().find(|b| b.category.eq_ignore_ascii_case(&category)) {
-                existing.limit = limit;
-            } else {
-                next.push(BudgetItem { category, limit });
-            }
-
-            save_budgets(&next);
-            budgets.set(next);
-            budget_category.set("".to_string());
-            budget_limit.set("".to_string());
-            budget_error.set(None);
-        })
-    };
-
-    let on_remove_budget = {
-        let budgets = budgets.clone();
-        Callback::from(move |category: String| {
-            let mut next = (*budgets).clone();
-            next.retain(|b| !b.category.eq_ignore_ascii_case(&category));
-            save_budgets(&next);
-            budgets.set(next);
-        })
-    };
 
     let mut spent_by_category: HashMap<String, i64> = HashMap::new();
     for tx in (*transactions).iter() {
@@ -582,9 +552,9 @@ fn dashboard_page() -> Html {
         .filter(|b| spent_by_category.get(&b.category).cloned().unwrap_or(0) > b.limit)
         .count();
 
-    let goal_saved: i64 = saving_goal.contributions.iter().map(|c| c.amount).sum();
-    let goal_progress = if saving_goal.target_amount > 0 {
-        (goal_saved as f64 / saving_goal.target_amount as f64).min(1.0)
+    let goal_saved: i64 = current_goal.contributions.iter().map(|c| c.amount).sum();
+    let goal_progress = if current_goal.target_amount > 0 {
+        (goal_saved as f64 / current_goal.target_amount as f64).min(1.0)
     } else {
         0.0
     };
@@ -612,15 +582,15 @@ fn dashboard_page() -> Html {
                                 <h3 class="font-bold text-foreground text-lg">{"Saving Goal"}</h3>
                                 <span class="text-xs text-muted-foreground">{"Managed in Saving Goal tab"}</span>
                             </div>
-                            { if saving_goal.target_amount == 0 {
+                            { if current_goal.target_amount == 0 && current_goal.contributions.is_empty() && current_goal.title.trim().is_empty() {
                                 html! { <p class="text-sm text-muted-foreground">{"No goal set yet."}</p> }
                             } else {
                                 html! {
                                     <>
-                                        <p class="text-sm text-muted-foreground">{ saving_goal.title.clone() }</p>
+                                        <p class="text-sm text-muted-foreground">{ if current_goal.title.trim().is_empty() { "Saving Goal" } else { current_goal.title.as_str() } }</p>
                                         <div class="mt-3 flex items-center justify-between text-sm">
                                             <span class="text-muted-foreground">{ format!("Saved: {}", format_currency(goal_saved, &currency_symbol)) }</span>
-                                            <span class="text-muted-foreground">{ format!("Target: {}", format_currency(saving_goal.target_amount, &currency_symbol)) }</span>
+                                            <span class="text-muted-foreground">{ if current_goal.target_amount > 0 { format!("Target: {}", format_currency(current_goal.target_amount, &currency_symbol)) } else { "Target: —".to_string() } }</span>
                                         </div>
                                         <div class="mt-2 h-2 w-full bg-secondary rounded-full overflow-hidden">
                                             <div class="h-full bg-primary" style={format!("width: {}%", (goal_progress * 100.0) as i32)}></div>
@@ -722,72 +692,6 @@ fn dashboard_page() -> Html {
                             }
                         } else { html!{} }
                     }
-
-                    <div class="bg-card rounded-[10px] p-6 mt-4 border border-border">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-bold text-foreground text-lg">{"Budgets"}</h3>
-                            <span class="text-xs text-muted-foreground">{"Set monthly limits by category"}</span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                            <input placeholder="Category" value={(*budget_category).clone()} oninput={Callback::from({
-                                let budget_category = budget_category.clone();
-                                move |e: InputEvent| {
-                                    if let Some(input) = e.target_dyn_into::<web_sys::HtmlInputElement>() {
-                                        budget_category.set(input.value());
-                                    }
-                                }
-                            })} class="p-2 border rounded" />
-                            <input placeholder={format!("Limit ({})", currency_symbol)} value={(*budget_limit).clone()} oninput={Callback::from({
-                                let budget_limit = budget_limit.clone();
-                                move |e: InputEvent| {
-                                    if let Some(input) = e.target_dyn_into::<web_sys::HtmlInputElement>() {
-                                        budget_limit.set(input.value());
-                                    }
-                                }
-                            })} class="p-2 border rounded" />
-                            <button onclick={on_add_budget} class="bg-primary text-primary-foreground px-4 rounded">{"Save Budget"}</button>
-                        </div>
-                        {
-                            if let Some(msg) = &*budget_error {
-                                html! { <p class="text-sm text-red-500 mb-3">{ msg.clone() }</p> }
-                            } else { html!{} }
-                        }
-                        <div class="space-y-2">
-                            { if budgets.is_empty() {
-                                html! { <p class="text-sm text-muted-foreground">{"No budgets yet."}</p> }
-                            } else {
-                                html! {
-                                    <div class="space-y-2">
-                                        { for budgets.iter().map(|b| {
-                                            let on_remove_budget = on_remove_budget.clone();
-                                            let cat = b.category.clone();
-                                            let spent = spent_by_category.get(&b.category).cloned().unwrap_or(0);
-                                            let remaining = (b.limit - spent).max(0);
-                                            let percent = if b.limit > 0 { (spent as f64 / b.limit as f64 * 100.0).round() as i64 } else { 0 };
-                                            html! {
-                                                <div class="flex flex-col gap-2 p-3 border rounded">
-                                                    <div class="flex items-center justify-between">
-                                                        <span class="font-semibold text-foreground">{ b.category.clone() }</span>
-                                                        <div class="flex items-center gap-3">
-                                                            <span class="text-sm text-muted-foreground">{ format!("{}% used", percent) }</span>
-                                                            <button onclick={Callback::from(move |_| on_remove_budget.emit(cat.clone()))} class="text-xs text-red-600 hover:underline">{"Remove"}</button>
-                                                        </div>
-                                                    </div>
-                                                    <div class="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                                                        <div class="h-full bg-primary" style={format!("width: {}%", percent.min(100))}></div>
-                                                    </div>
-                                                    <div class="flex items-center justify-between text-sm">
-                                                        <span class="text-muted-foreground">{ format!("Spent: {}", format_currency(spent, &currency_symbol)) }</span>
-                                                        <span class="text-muted-foreground">{ format!("Remaining: {}", format_currency(remaining, &currency_symbol)) }</span>
-                                                    </div>
-                                                </div>
-                                            }
-                                        }) }
-                                    </div>
-                                }
-                            }}
-                        </div>
-                    </div>
 
                     <div class="bg-card rounded-[10px] shadow-sm border border-border overflow-hidden mt-4">
                         <div class="p-6 flex justify-between items-center border-b border-border">
@@ -896,7 +800,8 @@ fn budget_page() -> Html {
                                         *totals.entry(tx.category.clone()).or_insert(0) += amt;
                                     }
                                 }
-                                let mut totals_vec: Vec<(String, i64)> = totals.into_iter().collect();
+                                let mut totals_vec: Vec<(String, i64)> =
+                                    totals.into_iter().collect();
                                 totals_vec.sort_by(|a, b| b.1.cmp(&a.1));
                                 category_totals.set(totals_vec);
                                 total_spent.set(spent);
@@ -927,7 +832,10 @@ fn budget_page() -> Html {
             }
 
             let mut next = (*budgets).clone();
-            if let Some(existing) = next.iter_mut().find(|b| b.category.eq_ignore_ascii_case(&category)) {
+            if let Some(existing) = next
+                .iter_mut()
+                .find(|b| b.category.eq_ignore_ascii_case(&category))
+            {
                 existing.limit = limit;
             } else {
                 next.push(BudgetItem { category, limit });
@@ -1105,7 +1013,10 @@ fn income_page() -> Html {
                     if let Ok(resp) = req.send().await {
                         if resp.ok() {
                             if let Ok(list) = resp.json::<Vec<Transaction>>().await {
-                                let filtered = list.into_iter().filter(|t| t.amount > 0).collect::<Vec<_>>();
+                                let filtered = list
+                                    .into_iter()
+                                    .filter(|t| t.amount > 0)
+                                    .collect::<Vec<_>>();
                                 incomes.set(filtered);
                             }
                         }
@@ -1134,7 +1045,11 @@ fn income_page() -> Html {
             let cat_val = form_category.trim().to_string();
             let amt_val = form_amount.trim().to_string();
 
-            if date_val.is_empty() || desc_val.is_empty() || cat_val.is_empty() || amt_val.is_empty() {
+            if date_val.is_empty()
+                || desc_val.is_empty()
+                || cat_val.is_empty()
+                || amt_val.is_empty()
+            {
                 form_error.set(Some("Please complete all fields.".to_string()));
                 return;
             }
@@ -1168,7 +1083,8 @@ fn income_page() -> Html {
                     if let Ok(Some(storage)) = window.local_storage() {
                         if let Ok(token_opt) = storage.get_item("access_token") {
                             if let Some(token) = token_opt {
-                                builder = builder.header("Authorization", &format!("Bearer {}", token));
+                                builder =
+                                    builder.header("Authorization", &format!("Bearer {}", token));
                             }
                         }
                     }
@@ -1441,7 +1357,10 @@ fn expense_page() -> Html {
                     if let Ok(resp) = req.send().await {
                         if resp.ok() {
                             if let Ok(list) = resp.json::<Vec<Transaction>>().await {
-                                let filtered = list.into_iter().filter(|t| t.amount < 0).collect::<Vec<_>>();
+                                let filtered = list
+                                    .into_iter()
+                                    .filter(|t| t.amount < 0)
+                                    .collect::<Vec<_>>();
                                 expenses.set(filtered);
                             }
                         }
@@ -1470,7 +1389,11 @@ fn expense_page() -> Html {
             let cat_val = form_category.trim().to_string();
             let amt_val = form_amount.trim().to_string();
 
-            if date_val.is_empty() || desc_val.is_empty() || cat_val.is_empty() || amt_val.is_empty() {
+            if date_val.is_empty()
+                || desc_val.is_empty()
+                || cat_val.is_empty()
+                || amt_val.is_empty()
+            {
                 form_error.set(Some("Please complete all fields.".to_string()));
                 return;
             }
@@ -1504,7 +1427,8 @@ fn expense_page() -> Html {
                     if let Ok(Some(storage)) = window.local_storage() {
                         if let Ok(token_opt) = storage.get_item("access_token") {
                             if let Some(token) = token_opt {
-                                builder = builder.header("Authorization", &format!("Bearer {}", token));
+                                builder =
+                                    builder.header("Authorization", &format!("Bearer {}", token));
                             }
                         }
                     }
@@ -1732,7 +1656,11 @@ fn savings_page() -> Html {
 
             // Also create a transaction so savings are reflected in totals
             let date_val = contrib_date.to_string();
-            let desc_val = if contrib_desc.is_empty() { "Savings".to_string() } else { contrib_desc.to_string() };
+            let desc_val = if contrib_desc.is_empty() {
+                "Savings".to_string()
+            } else {
+                contrib_desc.to_string()
+            };
             spawn_local(async move {
                 let url = format!("{}/api/transactions", API_BASE_URL);
                 let payload = serde_json::json!({
@@ -1747,7 +1675,8 @@ fn savings_page() -> Html {
                     if let Ok(Some(storage)) = window.local_storage() {
                         if let Ok(token_opt) = storage.get_item("access_token") {
                             if let Some(token) = token_opt {
-                                builder = builder.header("Authorization", &format!("Bearer {}", token));
+                                builder =
+                                    builder.header("Authorization", &format!("Bearer {}", token));
                             }
                         }
                     }
@@ -1766,6 +1695,28 @@ fn savings_page() -> Html {
         Callback::from(move |_| {
             contrib_amount.set("".to_string());
             contrib_desc.set("".to_string());
+        })
+    };
+
+    let remove_goal = {
+        let goal = goal.clone();
+        let new_goal_title = new_goal_title.clone();
+        let new_goal_amount = new_goal_amount.clone();
+        let new_goal_date = new_goal_date.clone();
+        let is_creating = is_creating.clone();
+        Callback::from(move |_| {
+            let cleared = SavingGoalState {
+                title: "".to_string(),
+                target_amount: 0,
+                target_date: "".to_string(),
+                contributions: vec![],
+            };
+            save_saving_goal(&cleared);
+            goal.set(cleared);
+            new_goal_title.set("".to_string());
+            new_goal_amount.set("".to_string());
+            new_goal_date.set("".to_string());
+            is_creating.set(false);
         })
     };
 
@@ -1795,9 +1746,14 @@ fn savings_page() -> Html {
         { page_shell(
             "Saving Goal",
             html! {
-                <button onclick={toggle_create} class="bg-primary text-primary-foreground px-4 py-2 rounded-[10px] text-xs font-bold uppercase flex items-center gap-1 shadow-md hover:opacity-90 transition-all">
-                    { if *is_creating { "Cancel" } else { "New Goal" } }
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick={toggle_create} class="bg-primary text-primary-foreground px-4 py-2 rounded-[10px] text-xs font-bold uppercase flex items-center gap-1 shadow-md hover:opacity-90 transition-all">
+                        { if *is_creating { "Cancel" } else { "New Goal" } }
+                    </button>
+                    <button onclick={remove_goal} class="bg-red-600 text-white px-4 py-2 rounded-[10px] text-xs font-bold uppercase shadow-md hover:opacity-90 transition-all">
+                        {"Remove Goal"}
+                    </button>
+                </div>
             },
             html! {
                 <>
@@ -1996,7 +1952,8 @@ fn summary_page() -> Html {
             move |_| {
                 spawn_local(async move {
                     let summary_url = format!("{}/api/dashboard/summary", API_BASE_URL);
-                    let mut req = Request::get(&summary_url).credentials(RequestCredentials::Include);
+                    let mut req =
+                        Request::get(&summary_url).credentials(RequestCredentials::Include);
                     if let Some(window) = web_sys::window() {
                         if let Ok(Some(storage)) = window.local_storage() {
                             if let Ok(token_opt) = storage.get_item("access_token") {
@@ -2013,7 +1970,8 @@ fn summary_page() -> Html {
                                 if let Some(v) = json.get("total_income").and_then(|x| x.as_i64()) {
                                     total_income.set(v);
                                 }
-                                if let Some(v) = json.get("total_expenses").and_then(|x| x.as_i64()) {
+                                if let Some(v) = json.get("total_expenses").and_then(|x| x.as_i64())
+                                {
                                     total_expenses.set(v);
                                 }
                                 if let Some(v) = json.get("balance").and_then(|x| x.as_i64()) {
@@ -2029,7 +1987,8 @@ fn summary_page() -> Html {
                         if let Ok(Some(storage)) = window.local_storage() {
                             if let Ok(token_opt) = storage.get_item("access_token") {
                                 if let Some(token) = token_opt {
-                                    req2 = req2.header("Authorization", &format!("Bearer {}", token));
+                                    req2 =
+                                        req2.header("Authorization", &format!("Bearer {}", token));
                                 }
                             }
                         }
@@ -2297,7 +2256,27 @@ fn app() -> Html {
                             }
                             auth_status.set(AuthStatus::Authenticated);
                         }
-                        _ => auth_status.set(AuthStatus::Unauthenticated),
+                        _ => {
+                            // Fallback to existing access token (keeps user logged in on refresh)
+                            let mut has_token = false;
+                            if let Some(window) = web_sys::window() {
+                                if let Ok(Some(storage)) = window.local_storage() {
+                                    if let Ok(token_opt) = storage.get_item("access_token") {
+                                        if let Some(token) = token_opt {
+                                            if !token.is_empty() {
+                                                has_token = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if has_token {
+                                auth_status.set(AuthStatus::Authenticated);
+                            } else {
+                                auth_status.set(AuthStatus::Unauthenticated);
+                            }
+                        }
                     }
                 });
                 || ()
