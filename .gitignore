@@ -30,7 +30,6 @@ backend/obj/
 .vs/
 
 # SQLite / data
-backend/data/
 **/*.db
 **/*.db-shm
 **/*.db-wal
