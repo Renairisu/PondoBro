@@ -1,0 +1,48 @@
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Rust / Cargo
+frontend/target/
+**/target/
+**/*.rs.bk
+Cargo.lock
+
+# Trunk / WASM
+frontend/dist/
+**/.trunk/
+
+# .NET / Visual Studio
+backend/bin/
+backend/obj/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# SQLite / data
+backend/data/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Node (if needed for old frontend)
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+
+# Build artifacts
+**/dist/
+**/build/
+**/*.log

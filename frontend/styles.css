@@ -1,0 +1,123 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+
+:root {
+	--background: 210 20% 98%;
+	--foreground: 215 25% 18%;
+
+	--card: 0 0% 100%;
+	--card-foreground: 209 62% 24%;
+
+	--popover: 0 0% 100%;
+	--popover-foreground: 209 62% 24%;
+
+	--primary: 215 35% 28%;
+	--primary-foreground: 210 20% 98%;
+
+	--secondary: 214 32% 91%;
+	--secondary-foreground: 215 25% 18%;
+
+	--muted: 214 28% 94%;
+	--muted-foreground: 215 16% 45%;
+
+	--accent: 199 45% 38%;
+	--accent-foreground: 210 20% 98%;
+
+	--destructive: 0 84.2% 60.2%;
+	--destructive-foreground: 210 40% 98%;
+
+	--border: 214 20% 86%;
+	--input: 214 25% 92%;
+	--ring: 215 35% 28%;
+
+	--radius: 1.5rem;
+
+	--sidebar-background: 215 35% 22%;
+	--sidebar-foreground: 210 20% 98%;
+	--sidebar-primary: 214 32% 91%;
+	--sidebar-primary-foreground: 215 25% 18%;
+	--sidebar-accent: 215 30% 30%;
+	--sidebar-accent-foreground: 210 20% 98%;
+	--sidebar-border: 215 20% 32%;
+	--sidebar-ring: 199 45% 38%;
+}
+
+.dark {
+	--background: 209 62% 24%;
+	--foreground: 0 0% 100%;
+
+	--card: 209 50% 30%;
+	--card-foreground: 0 0% 100%;
+
+	--primary: 0 0% 100%;
+	--primary-foreground: 209 62% 24%;
+
+	--border: 209 50% 35%;
+}
+
+* {
+	border-color: hsl(var(--border));
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		sans-serif;
+	background: hsl(var(--background));
+	color: hsl(var(--foreground));
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-black {
+	font-weight: 800;
+	letter-spacing: -0.02em;
+}
+
+/* Legacy hex color overrides for a calmer, consistent palette */
+.bg-\[\#D8E1E8\] {
+	background-color: hsl(var(--muted));
+}
+.bg-\[\#173E63\] {
+	background-color: hsl(var(--primary));
+}
+.bg-\[\#1D617A\] {
+	background-color: hsl(var(--primary));
+}
+.bg-\[\#B2CBDE\] {
+	background-color: hsl(var(--secondary));
+}
+.bg-\[\#dae3f0\] {
+	background-color: hsl(var(--secondary));
+}
+.bg-\[\#98BAD5\] {
+	background-color: hsl(var(--secondary));
+}
+.bg-\[\#f1f4f9\] {
+	background-color: hsl(var(--muted));
+}
+.bg-\[\#f1f5f9\] {
+	background-color: hsl(var(--muted));
+}
+.bg-\[\#eef4f9\] {
+	background-color: hsl(var(--muted));
+}
+.bg-\[\#f8fafc\] {
+	background-color: hsl(var(--muted));
+}
+
+.text-\[\#173E63\] {
+	color: hsl(var(--primary));
+}
+.text-\[\#1D617A\] {
+	color: hsl(var(--primary));
+}
+
+.border-\[\#173E63\] {
+	border-color: hsl(var(--primary));
+}
+.border-\[\#1D617A\] {
+	border-color: hsl(var(--primary));
+}
